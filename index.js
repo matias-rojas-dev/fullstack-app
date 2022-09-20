@@ -15,7 +15,7 @@ app.get('/api/notes', (request, response) => {
   })
 })
 
-app.get('/api/notes/:id', (request, response) => {
+app.get('/api/notes/:id', (request, response, next) => {
   const { id } = request.params
 
   Note.findById(id)
@@ -23,7 +23,8 @@ app.get('/api/notes/:id', (request, response) => {
       response.json(note)
     })
     .catch((error) => {
-      response.status(404).json(error)
+      next(error)
+      //response.status(400).json(error).end()
     })
 })
 
@@ -45,6 +46,43 @@ app.post('/api/notes', (request, response) => {
   newNote.save().then((savedNote) => {
     response.json(savedNote)
   })
+})
+
+app.delete('/api/notes/:id', (request, response, next) => {
+  const { id } = request.params
+
+  Note.findByIdAndRemove(id)
+    .then((result) => {
+      response.status(204).json({ msg: 'The post has been deleted' }).end()
+    })
+    .catch((error) => next(error))
+  response.status(204).end()
+})
+
+app.put('/api/notes/:id', (request, response, next) => {
+  const { id } = request.params
+  const note = request.body
+
+  const newNoteInfo = {
+    content: note.content,
+    important: note.important,
+  }
+  Note.findByIdAndUpdate(id, newNoteInfo, { new: true }).then((result) => {
+    response.status(200).json(result)
+  })
+})
+
+app.use((request, response, next) => {
+  response.status(404).end()
+})
+
+app.use((error, request, response, next) => {
+  console.error(error)
+  if (error.name === 'CastError') {
+    response.status(400).send({ error: 'Id used is malformed' })
+  } else {
+    response.status(500).end()
+  }
 })
 
 const PORT = process.env.PORT
