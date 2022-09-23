@@ -3,6 +3,8 @@ require('./mongo')
 const Note = require('./models/Note')
 const express = require('express')
 const cors = require('cors')
+const notFound = require('./middlewares/notFound')
+const handleErrors = require('./middlewares/handleErrors')
 
 const app = express()
 
@@ -20,12 +22,16 @@ app.get('/api/notes/:id', (request, response, next) => {
 
   Note.findById(id)
     .then((note) => {
-      response.json(note)
+      if (note) {
+        return response.json(note)
+      } else {
+        response.status(404).end()
+      }
     })
-    .catch((error) => {
-      next(error)
+    .catch(
+      (error) => next(error)
       //response.status(400).json(error).end()
-    })
+    )
 })
 
 app.post('/api/notes', (request, response) => {
@@ -72,20 +78,13 @@ app.put('/api/notes/:id', (request, response, next) => {
   })
 })
 
-app.use((request, response, next) => {
-  response.status(404).end()
-})
+// middlewares errors
 
-app.use((error, request, response, next) => {
-  console.error(error)
-  if (error.name === 'CastError') {
-    response.status(400).send({ error: 'Id used is malformed' })
-  } else {
-    response.status(500).end()
-  }
-})
+app.use(notFound)
+app.use(handleErrors)
 
-const PORT = process.env.PORT
+const PORT = process.env.PORT || 3001
+
 app.listen(PORT, () => {
   console.log(`Server running at port ${PORT}`)
 })
